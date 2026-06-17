@@ -177,6 +177,11 @@ class News(Base):
         default="local"
     )
  
+    country = Column(
+    String(100),
+    nullable=False,
+    default="India"
+)
     state = Column(String(100))
     district = Column(String(100))
     mandal = Column(String(100))
@@ -613,4 +618,5 @@ class NewsAudio(Base):
  
     # Relationships
     news = relationship("News", back_populates="audios")
+ 
  

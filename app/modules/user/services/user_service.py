@@ -9,13 +9,12 @@ from app.models.models import (
     PollVote,
     Notification
 )
-
-from sqlalchemy import select, func
-
 from app.utils.location_helper import (
-    get_location_from_coordinates
+    get_location_from_coordinates,
+    get_coordinates_from_location
 )
 
+from sqlalchemy import select, func
 from app.core.security import (
     hash_password,
     verify_password,
@@ -244,7 +243,6 @@ class UserService:
                 "unread_notifications": unread_notifications
             }
         )
-
     # =========================
     # UPDATE LANGUAGE
     # =========================
@@ -285,8 +283,9 @@ class UserService:
     async def update_location(
         db: AsyncSession,
         user_id: int,
-        latitude: float,
-        longitude: float
+        state: str,
+        district: str,
+        mandal: str
     ):
 
         user = await UserRepository.get_user_by_id(
@@ -300,6 +299,18 @@ class UserService:
                 detail="User not found"
             )
 
+        latitude, longitude = await get_coordinates_from_location(
+            state,
+            district,
+            mandal
+        )
+
+        if latitude is None or longitude is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unable to determine coordinates"
+            )
+
         user.latitude = latitude
         user.longitude = longitude
 
@@ -309,7 +320,7 @@ class UserService:
         return success_response(
             "Location updated successfully",
             {
-                "latitude": user.latitude,
-                "longitude": user.longitude
+                "latitude": latitude,
+                "longitude": longitude
             }
         )

@@ -107,6 +107,7 @@ async def update_location(
     return await UserService.update_location(
         db,
         current_user["user_id"],
-        request.latitude,
-        request.longitude
+        request.state,
+        request.district,
+        request.mandal
     )

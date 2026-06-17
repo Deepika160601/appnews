@@ -22,6 +22,7 @@ class NewsCreateRequest(BaseModel):
     category_id: int
 
     news_type: str
+    country: str
 
     state: Optional[str] = None
 
@@ -56,6 +57,7 @@ class NewsResponse(BaseModel):
     category_id: int
 
     news_type: str
+    country: str
 
     state: Optional[str]
 

@@ -89,5 +89,6 @@ class LanguageUpdateRequest(BaseModel):
 # UPDATE LOCATION
 # =========================
 class LocationUpdateRequest(BaseModel):
-    latitude: float
-    longitude: float
+    state: str
+    district: str
+    mandal: str

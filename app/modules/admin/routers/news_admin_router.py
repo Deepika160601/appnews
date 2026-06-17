@@ -45,6 +45,7 @@ async def add_news(
     category_id: int = Form(...),
 
     news_type: str = Form(...),
+    country: str = Form(...),
 
     state: str = Form(None),
     district: str = Form(None),
@@ -73,6 +74,7 @@ async def add_news(
         category_id=category_id,
 
         news_type=news_type,
+        country=country,
 
         state=state,
         district=district,
@@ -135,8 +137,6 @@ async def publish_news(
         db,
         news_id
     )
-
-
 # =========================
 # DELETE NEWS
 # =========================

@@ -24,8 +24,6 @@ from fastapi.security import (
 )
 
 from app.core.config import settings
-
-
 # ========================
 # PASSWORD HASHING
 # ========================
@@ -33,16 +31,12 @@ pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
 )
-
-
 # ========================
 # BEARER AUTH
 # ========================
 security = HTTPBearer(
     auto_error=True
 )
-
-
 # ========================
 # HASH PASSWORD
 # ========================
@@ -53,8 +47,6 @@ def hash_password(
     return pwd_context.hash(
         password
     )
-
-
 # ========================
 # VERIFY PASSWORD
 # ========================
