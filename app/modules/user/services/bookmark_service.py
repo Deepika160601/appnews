@@ -3,9 +3,10 @@ from fastapi import (
     status
 )
 
-from sqlalchemy.ext.asyncio import (
-    AsyncSession
-)
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from app.models.models import News
 
 from app.utils.api_response import success_response
 
@@ -15,20 +16,33 @@ from app.modules.user.repositories.bookmark_repository import (
     remove_bookmark
 )
 
+from app.modules.user.repositories.notification_repository import (
+    create_notification
+)
 
-# =========================
-# ADD BOOKMARK
-# =========================
+
 async def add_bookmark_service(
     db: AsyncSession,
-    user_id: int,
+    current_user: dict,
     news_id: int
 ):
 
+    role = current_user.get("role")
+
+    user_id = None
+    admin_id = None
+
+    if role == "user":
+        user_id = current_user.get("user_id")
+
+    elif role in ["admin", "superadmin"]:
+        admin_id = current_user.get("admin_id")
+
     bookmark = await add_bookmark(
-        db,
-        user_id,
-        news_id
+        db=db,
+        user_id=user_id,
+        admin_id=admin_id,
+        news_id=news_id
     )
 
     if bookmark == "already_bookmarked":
@@ -37,26 +51,53 @@ async def add_bookmark_service(
             detail="News already bookmarked"
         )
 
+    result = await db.execute(
+        select(News).where(
+            News.news_id == news_id
+        )
+    )
+
+    news = result.scalar_one_or_none()
+
+    if news and news.author_id:
+        await create_notification(
+            db=db,
+            admin_id=news.author_id,
+            news_id=news.news_id,
+            title="New Bookmark",
+            message="Someone bookmarked your news"
+        )
+
     return success_response(
         "News bookmarked successfully",
         {
             "bookmark_id": bookmark.bookmark_id,
-            "news_id": bookmark.news_id
+            "news_id": bookmark.news_id,
+            "is_bookmarked": True
         }
     )
 
 
-# =========================
-# GET USER BOOKMARKS
-# =========================
 async def get_user_bookmarks_service(
     db: AsyncSession,
-    user_id: int
+    current_user: dict
 ):
 
+    role = current_user.get("role")
+
+    user_id = None
+    admin_id = None
+
+    if role == "user":
+        user_id = current_user.get("user_id")
+
+    elif role in ["admin", "superadmin"]:
+        admin_id = current_user.get("admin_id")
+
     bookmarks = await get_user_bookmarks(
-        db,
-        user_id
+        db=db,
+        user_id=user_id,
+        admin_id=admin_id
     )
 
     return success_response(
@@ -65,19 +106,28 @@ async def get_user_bookmarks_service(
     )
 
 
-# =========================
-# REMOVE BOOKMARK
-# =========================
 async def remove_bookmark_service(
     db: AsyncSession,
-    user_id: int,
+    current_user: dict,
     news_id: int
 ):
 
+    role = current_user.get("role")
+
+    user_id = None
+    admin_id = None
+
+    if role == "user":
+        user_id = current_user.get("user_id")
+
+    elif role in ["admin", "superadmin"]:
+        admin_id = current_user.get("admin_id")
+
     bookmark = await remove_bookmark(
-        db,
-        user_id,
-        news_id
+        db=db,
+        user_id=user_id,
+        admin_id=admin_id,
+        news_id=news_id
     )
 
     if not bookmark:
@@ -89,6 +139,7 @@ async def remove_bookmark_service(
     return success_response(
         "Bookmark removed successfully",
         {
-            "news_id": news_id
+            "news_id": news_id,
+            "is_bookmarked": False
         }
     )

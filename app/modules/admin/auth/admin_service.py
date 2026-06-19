@@ -12,12 +12,18 @@ from app.modules.admin.auth.admin_repository import (
 )
 
 from app.models.models import (
+    Admin,
     News,
     Bookmark
 )
 
 from app.utils.location_helper import (
-    get_location_from_coordinates
+    get_location_from_coordinates,
+    get_coordinates_from_location
+)
+
+from app.utils.api_response import (
+    success_response
 )
 
 
@@ -190,3 +196,84 @@ class AdminService:
                 "posted_news": posted_news
             }
         }
+        # =========================
+    # UPDATE LANGUAGE
+    # =========================
+    @staticmethod
+    async def update_language(
+        db: AsyncSession,
+        admin_id: int,
+        preferred_language: str
+    ):
+
+        admin = await AdminRepository.get_admin_by_id(
+            db,
+            admin_id
+        )
+
+        if not admin:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Admin not found"
+            )
+
+        admin.preferred_language = preferred_language
+
+        await db.commit()
+        await db.refresh(admin)
+
+        return success_response(
+            "Language updated successfully",
+            {
+                "preferred_language": admin.preferred_language
+            }
+        )
+
+    # =========================
+    # UPDATE LOCATION
+    # =========================
+    @staticmethod
+    async def update_location(
+        db: AsyncSession,
+        admin_id: int,
+        state: str,
+        district: str,
+        mandal: str
+    ):
+
+        admin = await AdminRepository.get_admin_by_id(
+            db,
+            admin_id
+        )
+
+        if not admin:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Admin not found"
+            )
+
+        latitude, longitude = await get_coordinates_from_location(
+            state,
+            district,
+            mandal
+        )
+
+        if latitude is None or longitude is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unable to determine coordinates"
+            )
+
+        admin.latitude = latitude
+        admin.longitude = longitude
+
+        await db.commit()
+        await db.refresh(admin)
+
+        return success_response(
+            "Location updated successfully",
+            {
+                "latitude": latitude,
+                "longitude": longitude
+            }
+        )

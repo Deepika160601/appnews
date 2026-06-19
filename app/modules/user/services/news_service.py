@@ -16,75 +16,118 @@ from app.utils.location_helper import (
 from app.modules.user.repositories.news_repository import (
     get_latest_news,
     get_news_by_id,
-     share_news
+    share_news
 )
 
 from app.modules.user.repositories.user_repository import (
     UserRepository
 )
 
+from app.modules.admin.auth.admin_repository import (
+    AdminRepository
+)
+
 
 # =========================
 # GET LATEST NEWS
 # =========================
+
 async def get_latest_news_service(
     db: AsyncSession,
-    user_id: int
+    current_user: dict
 ):
 
-    user = await UserRepository.get_user_by_id(
+    role = current_user.get("role")
+
+    # =========================
+    # USER
+    # =========================
+    if role == "user":
+
+        user = await UserRepository.get_user_by_id(
+            db,
+            current_user["user_id"]
+        )
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        if (
+            user.latitude is None or
+            user.longitude is None
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User location not available"
+            )
+
+        location = await get_location_from_coordinates(
+            user.latitude,
+            user.longitude
+        )
+
+        if not location:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Unable to detect location"
+            )
+
+        news = await get_latest_news(
+            db=db,
+            language=user.preferred_language,
+            state=location.get("state"),
+            district=location.get("district"),
+            city=location.get("city")
+        )
+
+        return success_response(
+            "News fetched successfully",
+            {
+                "language": user.preferred_language,
+                "detected_location": location,
+                "news": news
+            }
+        )
+
+    # =========================
+    # ADMIN / SUPERADMIN
+    # =========================
+
+    admin = await AdminRepository.get_admin_by_id(
         db,
-        user_id
+        current_user["admin_id"]
     )
 
-    if not user:
-
+    if not admin:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="Admin not found"
         )
 
-    if (
-        user.latitude is None or
-        user.longitude is None
-    ):
+    location = None
 
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User location not available"
-        )
+    if admin.latitude and admin.longitude:
 
-    location = await get_location_from_coordinates(
-        user.latitude,
-        user.longitude
-    )
-
-    if not location:
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Unable to detect location"
+        location = await get_location_from_coordinates(
+            admin.latitude,
+            admin.longitude
         )
 
     news = await get_latest_news(
         db=db,
-        language=user.preferred_language,
-        state=location.get("state"),
-        district=location.get("district"),
-        city=location.get("city")
+        language=admin.preferred_language,
+        state=location.get("state") if location else None,
+        district=location.get("district") if location else None,
+        city=location.get("city") if location else None
     )
-
-    if not news:
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No news found"
-        )
 
     return success_response(
         "News fetched successfully",
         {
-            "language": user.preferred_language,
+            "language": admin.preferred_language,
             "detected_location": location,
             "news": news
         }
@@ -94,32 +137,52 @@ async def get_latest_news_service(
 # =========================
 # GET NEWS DETAILS
 # =========================
+
 async def get_news_by_id_service(
     db: AsyncSession,
     news_id: int,
-    user_id: int
+    current_user: dict
 ):
 
-    user = await UserRepository.get_user_by_id(
-        db,
-        user_id
-    )
+    role = current_user.get("role")
 
-    if not user:
+    if role == "user":
 
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+        user = await UserRepository.get_user_by_id(
+            db,
+            current_user["user_id"]
         )
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        language = user.preferred_language
+
+    else:
+
+        admin = await AdminRepository.get_admin_by_id(
+            db,
+            current_user["admin_id"]
+        )
+
+        if not admin:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Admin not found"
+            )
+
+        language = admin.preferred_language
 
     news = await get_news_by_id(
         db=db,
         news_id=news_id,
-        language=user.preferred_language
+        language=language
     )
 
     if not news:
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="News not found"
@@ -129,9 +192,12 @@ async def get_news_by_id_service(
         "News details fetched successfully",
         news
     )
+
+
 # =========================
 # SHARE NEWS
 # =========================
+
 async def share_news_service(
     db: AsyncSession,
     news_id: int
@@ -143,13 +209,12 @@ async def share_news_service(
     )
 
     if not news:
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="News not found"
         )
 
     return success_response(
-           "News shared successfully",
+        "News shared successfully",
         news
     )

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import (
 from app.db.db import get_db
 
 from app.core.security import (
-    get_current_user
+    get_current_admin_or_user
 )
 
 from app.modules.user.services.notification_service import (
@@ -30,30 +30,32 @@ class NotificationSettingsRequest(BaseModel):
 # =========================
 # GET MY NOTIFICATIONS
 # =========================
+
 @router.get("/")
 async def get_notifications(
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin_or_user)
 ):
 
     return await get_user_notifications_service(
         db,
-        current_user["user_id"]
+        current_user
     )
 
 
 # =========================
 # NOTIFICATION ON / OFF
 # =========================
+
 @router.put("/settings")
 async def update_notification_settings(
     request: NotificationSettingsRequest,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin_or_user)
 ):
 
     return await update_notification_settings_service(
         db,
-        current_user["user_id"],
+        current_user,
         request.notification_enabled
     )

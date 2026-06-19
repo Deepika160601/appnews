@@ -6,10 +6,9 @@ from app.core.config import settings
 from app.core.security import hash_password
 
 
-async def create_default_admin(
+async def create_default_superadmin(
     db: AsyncSession
 ):
-
     result = await db.execute(
         select(Admin).where(
             Admin.email ==
@@ -17,13 +16,18 @@ async def create_default_admin(
         )
     )
 
-    admin = result.scalar_one_or_none()
+    superadmin = result.scalar_one_or_none()
 
-    if admin:
-        print("Admin already exists")
+    if superadmin:
+
+        if superadmin.role != "superadmin":
+            superadmin.role = "superadmin"
+            await db.commit()
+
+        print("Super Admin already exists")
         return
 
-    admin = Admin(
+    superadmin = Admin(
         name=settings.DEFAULT_ADMIN_NAME,
         email=settings.DEFAULT_ADMIN_EMAIL,
         password_hash=hash_password(
@@ -32,10 +36,10 @@ async def create_default_admin(
         role=settings.DEFAULT_ADMIN_ROLE
     )
 
-    db.add(admin)
+    db.add(superadmin)
 
     await db.commit()
 
     print(
-        "Default admin created successfully"
+        "Default Super Admin created successfully"
     )

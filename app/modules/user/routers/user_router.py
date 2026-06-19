@@ -12,7 +12,12 @@ from sqlalchemy.ext.asyncio import (
 from app.db.db import get_db
 
 from app.core.security import (
-    get_current_user
+    get_current_user,
+    get_current_admin_or_user
+)
+
+from app.modules.admin.auth.admin_service import (
+    AdminService
 )
 
 from app.modules.user.schemas.user_schema import (
@@ -63,20 +68,25 @@ async def login_user(
         email=request.email,
         password=request.password
     )
-# =========================
-# GET PROFILE
-# =========================
+#---------------GET PROFILE------------------
 @router.get("/profile")
 async def get_profile(
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin_or_user)
 ):
 
-    return await UserService.get_profile(
-        db,
-        current_user["user_id"]
-    )
+    role = current_user.get("role")
 
+    if role == "user":
+        return await UserService.get_profile(
+            db,
+            current_user["user_id"]
+        )
+
+    return await AdminService.get_profile(
+        db,
+        current_user["admin_id"]
+    )
 # =========================
 # UPDATE LANGUAGE
 # =========================
@@ -84,12 +94,21 @@ async def get_profile(
 async def update_language(
     request: LanguageUpdateRequest,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin_or_user)
 ):
 
-    return await UserService.update_language(
+    role = current_user.get("role")
+
+    if role == "user":
+        return await UserService.update_language(
+            db,
+            current_user["user_id"],
+            request.preferred_language
+        )
+
+    return await AdminService.update_language(
         db,
-        current_user["user_id"],
+        current_user["admin_id"],
         request.preferred_language
     )
 
@@ -101,12 +120,23 @@ async def update_language(
 async def update_location(
     request: LocationUpdateRequest,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin_or_user)
 ):
 
-    return await UserService.update_location(
+    role = current_user.get("role")
+
+    if role == "user":
+        return await UserService.update_location(
+            db,
+            current_user["user_id"],
+            request.state,
+            request.district,
+            request.mandal
+        )
+
+    return await AdminService.update_location(
         db,
-        current_user["user_id"],
+        current_user["admin_id"],
         request.state,
         request.district,
         request.mandal

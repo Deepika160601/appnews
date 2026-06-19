@@ -30,6 +30,9 @@ class Admin(Base):
     password_hash = Column(Text, nullable=False)
 
     role = Column(String(50), default="admin")
+    address = Column(Text, nullable=True)
+
+    aadhaar_file = Column(Text, nullable=True)  
 
     preferred_language = Column(
         String(10),
@@ -55,7 +58,10 @@ class Admin(Base):
         TIMESTAMP,
         server_default=func.now()
     )
-
+    notifications = relationship(
+    "Notification",
+    back_populates="admin"
+)
     # News created by admin
     created_news = relationship(
         "News",
@@ -69,6 +75,17 @@ class Admin(Base):
         foreign_keys="News.approved_by",
         back_populates="approved_admin"
     )
+    likes = relationship(
+    "Like",
+    back_populates="admin"
+)
+    comments = relationship(
+    "Comment",
+    back_populates="admin"
+)
+    bookmarks = relationship(
+    "Bookmark"
+)
 # ========================
 # # ========================
 # USERS
@@ -341,53 +358,142 @@ class NewsMedia(Base):
 # ========================
 class Like(Base):
     __tablename__ = "likes"
- 
+
     like_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
-    news_id = Column(Integer, ForeignKey("news.news_id"))
-    created_at = Column(TIMESTAMP, server_default=func.now())
- 
-    # Relationships
-    user = relationship("User", back_populates="likes")
-    news = relationship("News", back_populates="likes")
- 
- 
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=True
+    )
+
+    admin_id = Column(
+        Integer,
+        ForeignKey("admins.admin_id"),
+        nullable=True
+    )
+
+    news_id = Column(
+        Integer,
+        ForeignKey("news.news_id")
+    )
+
+    created_at = Column(
+        TIMESTAMP,
+        server_default=func.now()
+    )
+
+    user = relationship(
+        "User",
+        back_populates="likes"
+    )
+
+    admin = relationship(
+        "Admin"
+    )
+
+    news = relationship(
+        "News",
+        back_populates="likes"
+    )
 # ========================
+# # ========================
 # COMMENTS
 # ========================
 class Comment(Base):
     __tablename__ = "comments"
- 
+
     comment_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
-    news_id = Column(Integer, ForeignKey("news.news_id"))
-    parent_comment_id = Column(Integer, ForeignKey("comments.comment_id"))
- 
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=True
+    )
+
+    admin_id = Column(
+        Integer,
+        ForeignKey("admins.admin_id"),
+        nullable=True
+    )
+
+    news_id = Column(
+        Integer,
+        ForeignKey("news.news_id")
+    )
+
+    parent_comment_id = Column(
+        Integer,
+        ForeignKey("comments.comment_id")
+    )
+
     content = Column(Text, nullable=False)
-    created_at = Column(TIMESTAMP, server_default=func.now())
- 
-    # Relationships
-    user = relationship("User", back_populates="comments")
-    news = relationship("News", back_populates="comments")
- 
-    replies = relationship("Comment")
- 
- 
-# ========================
+
+    created_at = Column(
+        TIMESTAMP,
+        server_default=func.now()
+    )
+
+    user = relationship(
+        "User",
+        back_populates="comments"
+    )
+
+    admin = relationship(
+        "Admin",
+        back_populates="comments"
+    )
+
+    news = relationship(
+        "News",
+        back_populates="comments"
+    )
+
+    replies = relationship(
+        "Comment"
+    )
+   
 # BOOKMARKS
-# ========================
 class Bookmark(Base):
     __tablename__ = "bookmarks"
- 
+
     bookmark_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
-    news_id = Column(Integer, ForeignKey("news.news_id"))
-    created_at = Column(TIMESTAMP, server_default=func.now())
- 
-    # Relationships
-    user = relationship("User", back_populates="bookmarks")
-    news = relationship("News", back_populates="bookmarks")
- 
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=True
+    )
+
+    admin_id = Column(
+        Integer,
+        ForeignKey("admins.admin_id"),
+        nullable=True
+    )
+
+    news_id = Column(
+        Integer,
+        ForeignKey("news.news_id")
+    )
+
+    created_at = Column(
+        TIMESTAMP,
+        server_default=func.now()
+    )
+
+    user = relationship(
+        "User",
+        back_populates="bookmarks"
+    )
+
+    admin = relationship(
+        "Admin"
+    )
+
+    news = relationship(
+        "News",
+        back_populates="bookmarks"
+    )
  
 # ========================
 # POLLS
@@ -579,29 +685,50 @@ class NewsTranslation(Base):
 # ========================
 class Notification(Base):
     __tablename__ = "notifications"
- 
+
     notification_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
-    news_id = Column(Integer, ForeignKey("news.news_id"))
- 
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=True
+    )
+
+    admin_id = Column(
+        Integer,
+        ForeignKey("admins.admin_id"),
+        nullable=True
+    )
+
+    news_id = Column(
+        Integer,
+        ForeignKey("news.news_id")
+    )
+
     title = Column(Text)
     message = Column(Text)
- 
+
     type = Column(String(50))
     target_type = Column(String(20))
- 
+
     is_read = Column(Boolean, default=False)
     is_sent = Column(Boolean, default=False)
- 
+
     created_at = Column(TIMESTAMP, server_default=func.now())
     sent_at = Column(TIMESTAMP)
     expires_at = Column(TIMESTAMP)
- 
-    # Relationships
-    user = relationship("User", back_populates="notifications")
+
+    user = relationship(
+        "User",
+        back_populates="notifications"
+    )
+
+    admin = relationship(
+        "Admin",
+        back_populates="notifications"
+    )
+
     news = relationship("News")
- 
- 
 # ========================
 # NEWS AUDIO
 # ========================
@@ -618,5 +745,4 @@ class NewsAudio(Base):
  
     # Relationships
     news = relationship("News", back_populates="audios")
- 
  

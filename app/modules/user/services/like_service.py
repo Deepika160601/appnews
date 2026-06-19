@@ -18,38 +18,42 @@ from app.modules.user.repositories.like_repository import (
     unlike_news
 )
 
+from app.modules.user.repositories.notification_repository import (
+    create_notification
+)
+
 
 # =========================
 # LIKE NEWS
+# USER + ADMIN + SUPERADMIN
 # =========================
 async def like_news_service(
     db: AsyncSession,
-    user_id: int,
+    current_user: dict,
     news_id: int
 ):
 
-    if user_id <= 0:
+    role = current_user.get("role")
+
+    user_id = None
+    admin_id = None
+
+    if role == "user":
+        user_id = current_user.get("user_id")
+
+    elif role in ["admin", "superadmin"]:
+        admin_id = current_user.get("admin_id")
+
+    else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user id"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid role"
         )
 
     if news_id <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid news id"
-        )
-
-    like = await like_news(
-        db,
-        user_id,
-        news_id
-    )
-
-    if like == "already_liked":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You have already liked this news"
         )
 
     result = await db.execute(
@@ -60,28 +64,77 @@ async def like_news_service(
 
     news = result.scalar_one_or_none()
 
+    if not news:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="News not found"
+        )
+
+    like = await like_news(
+        db=db,
+        news_id=news_id,
+        user_id=user_id,
+        admin_id=admin_id
+    )
+
+    if like == "already_liked":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You have already liked this news"
+        )
+
+    if news.author_id:
+
+        await create_notification(
+            db=db,
+            admin_id=news.author_id,
+            news_id=news.news_id,
+            title="New Like",
+            message="Someone liked your news"
+        )
+
     return success_response(
         "News liked successfully",
         {
-            "news_id": news_id,
-            "like_count": news.like_count
+            "news_id": news.news_id,
+            "like_count": news.like_count,
+            "is_liked": True
         }
     )
 
 
 # =========================
 # UNLIKE NEWS
+# USER + ADMIN + SUPERADMIN
 # =========================
 async def unlike_news_service(
     db: AsyncSession,
-    user_id: int,
+    current_user: dict,
     news_id: int
 ):
 
+    role = current_user.get("role")
+
+    user_id = None
+    admin_id = None
+
+    if role == "user":
+        user_id = current_user.get("user_id")
+
+    elif role in ["admin", "superadmin"]:
+        admin_id = current_user.get("admin_id")
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid role"
+        )
+
     like = await unlike_news(
-        db,
-        user_id,
-        news_id
+        db=db,
+        news_id=news_id,
+        user_id=user_id,
+        admin_id=admin_id
     )
 
     if not like:
@@ -102,6 +155,7 @@ async def unlike_news_service(
         "News unliked successfully",
         {
             "news_id": news_id,
-            "like_count": news.like_count
+            "like_count": news.like_count if news else 0,
+            "is_liked": False
         }
     )

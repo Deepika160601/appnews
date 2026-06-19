@@ -24,6 +24,8 @@ from fastapi.security import (
 )
 
 from app.core.config import settings
+
+
 # ========================
 # PASSWORD HASHING
 # ========================
@@ -31,12 +33,16 @@ pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
 )
+
+
 # ========================
 # BEARER AUTH
 # ========================
 security = HTTPBearer(
     auto_error=True
 )
+
+
 # ========================
 # HASH PASSWORD
 # ========================
@@ -47,6 +53,8 @@ def hash_password(
     return pwd_context.hash(
         password
     )
+
+
 # ========================
 # VERIFY PASSWORD
 # ========================
@@ -175,11 +183,90 @@ async def get_current_admin(
         "role"
     )
 
-    if role != "admin":
+    if role not in [
+        "admin",
+        "superadmin"
+    ]:
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
+        )
+
+    return payload
+
+
+# ========================
+# GET CURRENT ADMIN OR USER
+# ========================
+async def get_current_admin_or_user(
+    credentials: HTTPAuthorizationCredentials = Depends(
+        security
+    )
+):
+
+    token = credentials.credentials
+
+    payload = decode_access_token(
+        token
+    )
+
+    if payload is None:
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+
+    role = payload.get(
+        "role"
+    )
+
+    if role not in [
+        "user",
+        "admin",
+        "superadmin"
+    ]:
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    return payload
+
+
+# ========================
+# GET CURRENT SUPER ADMIN
+# ========================
+async def get_current_superadmin(
+    credentials: HTTPAuthorizationCredentials = Depends(
+        security
+    )
+):
+
+    token = credentials.credentials
+
+    payload = decode_access_token(
+        token
+    )
+
+    if payload is None:
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+
+    role = payload.get(
+        "role"
+    )
+
+    if role != "superadmin":
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super Admin access required"
         )
 
     return payload
@@ -234,6 +321,33 @@ async def get_current_admin_id(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Admin ID not found in token"
+        )
+
+    return admin_id
+
+
+# ========================
+# GET CURRENT SUPER ADMIN ID
+# ========================
+async def get_current_superadmin_id(
+    credentials: HTTPAuthorizationCredentials = Depends(
+        security
+    )
+):
+
+    payload = await get_current_superadmin(
+        credentials
+    )
+
+    admin_id = payload.get(
+        "admin_id"
+    )
+
+    if admin_id is None:
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Super Admin ID not found in token"
         )
 
     return admin_id

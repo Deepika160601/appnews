@@ -12,16 +12,26 @@ from app.models.models import (
 # =========================
 async def add_bookmark(
     db: AsyncSession,
-    user_id: int,
-    news_id: int
+    user_id: int = None,
+    admin_id: int = None,
+    news_id: int = None
 ):
 
-    result = await db.execute(
-        select(Bookmark).where(
-            Bookmark.user_id == user_id,
-            Bookmark.news_id == news_id
-        )
+    query = select(Bookmark).where(
+        Bookmark.news_id == news_id
     )
+
+    if user_id:
+        query = query.where(
+            Bookmark.user_id == user_id
+        )
+
+    elif admin_id:
+        query = query.where(
+            Bookmark.admin_id == admin_id
+        )
+
+    result = await db.execute(query)
 
     existing = result.scalar_one_or_none()
 
@@ -30,6 +40,7 @@ async def add_bookmark(
 
     bookmark = Bookmark(
         user_id=user_id,
+        admin_id=admin_id,
         news_id=news_id
     )
 
@@ -43,14 +54,15 @@ async def add_bookmark(
 
 
 # =========================
-# GET USER BOOKMARKS
+# GET USER/ADMIN BOOKMARKS
 # =========================
 async def get_user_bookmarks(
     db: AsyncSession,
-    user_id: int
+    user_id: int = None,
+    admin_id: int = None
 ):
 
-    result = await db.execute(
+    query = (
         select(
             Bookmark.bookmark_id,
             Bookmark.news_id,
@@ -63,10 +75,19 @@ async def get_user_bookmarks(
             News,
             Bookmark.news_id == News.news_id
         )
-        .where(
+    )
+
+    if user_id:
+        query = query.where(
             Bookmark.user_id == user_id
         )
-    )
+
+    elif admin_id:
+        query = query.where(
+            Bookmark.admin_id == admin_id
+        )
+
+    result = await db.execute(query)
 
     rows = result.all()
 
@@ -88,16 +109,26 @@ async def get_user_bookmarks(
 # =========================
 async def remove_bookmark(
     db: AsyncSession,
-    user_id: int,
-    news_id: int
+    user_id: int = None,
+    admin_id: int = None,
+    news_id: int = None
 ):
 
-    result = await db.execute(
-        select(Bookmark).where(
-            Bookmark.user_id == user_id,
-            Bookmark.news_id == news_id
-        )
+    query = select(Bookmark).where(
+        Bookmark.news_id == news_id
     )
+
+    if user_id:
+        query = query.where(
+            Bookmark.user_id == user_id
+        )
+
+    elif admin_id:
+        query = query.where(
+            Bookmark.admin_id == admin_id
+        )
+
+    result = await db.execute(query)
 
     bookmark = result.scalar_one_or_none()
 

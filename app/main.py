@@ -13,9 +13,8 @@ from app.db.db import (
 from app.models.models import Base
 
 from app.core.admin_initializer import (
-    create_default_admin
+    create_default_superadmin
 )
-
 
 # ========================
 # STARTUP
@@ -30,10 +29,10 @@ async def lifespan(app: FastAPI):
             Base.metadata.create_all
         )
 
-    # Create Default Admin
+    # Create Default Super Admin
     async with AsyncSessionLocal() as db:
 
-        await create_default_admin(
+        await create_default_superadmin(
             db
         )
 
@@ -81,30 +80,73 @@ async def http_exception_handler(
         }
     )
 
+
+# ========================
+# SUPER ADMIN ROUTERS
+# ========================
+from app.modules.superadmin.auth.superadmin_router import (
+    router as superadmin_router
+)
+
 # ========================
 # ADMIN ROUTERS
 # ========================
 from app.modules.admin.auth.admin_router import (
     router as admin_router
 )
-from app.modules.admin.routers.dashboard_router import router as dashboard_router
-from app.modules.admin.routers.category_router import router as category_router
-from app.modules.admin.routers.news_admin_router import router as admin_news_router
-from app.modules.admin.routers.poll_admin_router import router as admin_poll_router
 
+from app.modules.admin.routers.dashboard_router import (
+    router as dashboard_router
+)
+
+from app.modules.admin.routers.category_router import (
+    router as category_router
+)
+
+from app.modules.admin.routers.news_admin_router import (
+    router as admin_news_router
+)
 
 # ========================
 # USER ROUTERS
 # ========================
-from app.modules.user.routers.user_router import router as user_router
-from app.modules.user.routers.news_router import router as user_news_router
-from app.modules.user.routers.comment_router import router as comment_router
-from app.modules.user.routers.like_router import router as like_router
-from app.modules.user.routers.bookmark_router import router as bookmark_router
-from app.modules.user.routers.poll_router import router as user_poll_router
-from app.modules.user.routers.notification_router import router as notification_router
-from app.modules.user.routers.search_router import router as search_router
+from app.modules.user.routers.user_router import (
+    router as user_router
+)
 
+from app.modules.user.routers.news_router import (
+    router as user_news_router
+)
+
+from app.modules.user.routers.comment_router import (
+    router as comment_router
+)
+
+from app.modules.user.routers.like_router import (
+    router as like_router
+)
+
+from app.modules.user.routers.bookmark_router import (
+    router as bookmark_router
+)
+
+from app.modules.user.routers.notification_router import (
+    router as notification_router
+)
+
+from app.modules.user.routers.search_router import (
+    router as search_router
+)
+
+
+# ========================
+# SUPER ADMIN ROUTES
+# ========================
+app.include_router(
+    superadmin_router,
+    prefix="/superadmin/auth",
+    tags=["Super Admin"]
+)
 
 # ========================
 # ADMIN ROUTES
@@ -132,13 +174,6 @@ app.include_router(
     prefix="/admin/news",
     tags=["Admin News"]
 )
-
-app.include_router(
-    admin_poll_router,
-    prefix="/admin/polls",
-    tags=["Admin Polls"]
-)
-
 
 # ========================
 # USER ROUTES
@@ -174,12 +209,6 @@ app.include_router(
 )
 
 app.include_router(
-    user_poll_router,
-    prefix="/polls",
-    tags=["Polls"]
-)
-
-app.include_router(
     notification_router,
     prefix="/notifications",
     tags=["Notifications"]
@@ -191,7 +220,6 @@ app.include_router(
     tags=["Search"]
 )
 
-
 # ========================
 # ROOT
 # ========================
@@ -199,5 +227,5 @@ app.include_router(
 async def root():
 
     return {
-        "message": "News API is running "
+        "message": "News API is running"
     }

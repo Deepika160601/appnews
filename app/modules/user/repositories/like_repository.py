@@ -12,16 +12,26 @@ from app.models.models import (
 # =========================
 async def like_news(
     db: AsyncSession,
-    user_id: int,
-    news_id: int
+    news_id: int,
+    user_id: int = None,
+    admin_id: int = None
 ):
 
-    result = await db.execute(
-        select(Like).where(
-            Like.user_id == user_id,
-            Like.news_id == news_id
-        )
+    query = select(Like).where(
+        Like.news_id == news_id
     )
+
+    if user_id:
+        query = query.where(
+            Like.user_id == user_id
+        )
+
+    elif admin_id:
+        query = query.where(
+            Like.admin_id == admin_id
+        )
+
+    result = await db.execute(query)
 
     existing = result.scalar_one_or_none()
 
@@ -30,6 +40,7 @@ async def like_news(
 
     like = Like(
         user_id=user_id,
+        admin_id=admin_id,
         news_id=news_id
     )
 
@@ -58,16 +69,26 @@ async def like_news(
 # =========================
 async def unlike_news(
     db: AsyncSession,
-    user_id: int,
-    news_id: int
+    news_id: int,
+    user_id: int = None,
+    admin_id: int = None
 ):
 
-    result = await db.execute(
-        select(Like).where(
-            Like.user_id == user_id,
-            Like.news_id == news_id
-        )
+    query = select(Like).where(
+        Like.news_id == news_id
     )
+
+    if user_id:
+        query = query.where(
+            Like.user_id == user_id
+        )
+
+    elif admin_id:
+        query = query.where(
+            Like.admin_id == admin_id
+        )
+
+    result = await db.execute(query)
 
     like = result.scalar_one_or_none()
 
