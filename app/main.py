@@ -9,7 +9,9 @@ from app.db.db import (
     engine,
     AsyncSessionLocal
 )
-
+from app.utils.s3_helper import (
+    upload_image_to_s3,upload_video_to_s3
+)
 from app.models.models import Base
 
 from app.core.admin_initializer import (
@@ -87,7 +89,15 @@ async def http_exception_handler(
 from app.modules.superadmin.auth.superadmin_router import (
     router as superadmin_router
 )
-
+from app.modules.superadmin.auth.news.superadmin_news_router import (
+    router as superadmin_news_router
+)
+from app.modules.superadmin.categories.superadmin_category_router import (
+    router as superadmin_category_router
+)
+from app.modules.superadmin.analytics.superadmin_analytics_router import (
+    router as superadmin_analytics_router
+)
 # ========================
 # ADMIN ROUTERS
 # ========================
@@ -147,7 +157,21 @@ app.include_router(
     prefix="/superadmin/auth",
     tags=["Super Admin"]
 )
-
+app.include_router(
+    superadmin_news_router,
+    prefix="/superadmin",
+    tags=["Super Admin News"]
+)
+app.include_router(
+    superadmin_category_router,
+    prefix="/superadmin",
+    tags=["Super Admin Categories"]
+)
+app.include_router(
+    superadmin_analytics_router,
+    prefix="/superadmin/analytics",
+    tags=["Super Admin Analytics"]
+)
 # ========================
 # ADMIN ROUTES
 # ========================

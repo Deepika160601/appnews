@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.models import (
     News,
-    NewsTranslation
+    NewsTranslation,
+    Category
 )
 
 from datetime import datetime
@@ -136,3 +137,21 @@ async def delete_news(
     await db.delete(news)
 
     await db.commit()
+
+    # =========================
+# GET CATEGORY BY ID
+# =========================
+async def get_category_by_id(
+    db: AsyncSession,
+    category_id: int
+):
+
+    from app.models.models import Category
+
+    result = await db.execute(
+        select(Category).where(
+            Category.category_id == category_id
+        )
+    )
+
+    return result.scalar_one_or_none()

@@ -1,6 +1,3 @@
-import os
-import uuid
-
 from fastapi import (
     HTTPException,
     UploadFile,
@@ -17,6 +14,10 @@ from app.core.security import (
     create_access_token
 )
 
+from app.utils.s3_helper import (
+    upload_document_to_s3
+)
+
 from app.modules.superadmin.auth.superadmin_repository import (
     SuperAdminRepository
 )
@@ -24,6 +25,9 @@ from app.modules.superadmin.auth.superadmin_repository import (
 
 class SuperAdminService:
 
+    # =========================
+    # LOGIN SUPER ADMIN
+    # =========================
     @staticmethod
     async def login_superadmin(
         db: AsyncSession,
@@ -40,55 +44,46 @@ class SuperAdminService:
         )
 
         if not admin:
-
             raise HTTPException(
-                status_code=404,
-                detail="Super Admin not found"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
             )
 
         if admin.role != "superadmin":
-
             raise HTTPException(
-                status_code=403,
-                detail="Access denied"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only Super Admin can login here"
             )
 
         if not verify_password(
             password,
             admin.password_hash
         ):
-
             raise HTTPException(
-                status_code=401,
-                detail="Invalid credentials"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
             )
 
         token = create_access_token(
             {
-                "admin_id":
-                admin.admin_id,
-
-                "email":
-                admin.email,
-
-                "role":
-                admin.role
+                "admin_id": admin.admin_id,
+                "email": admin.email,
+                "role": admin.role
             }
         )
 
         return {
             "success": True,
-            "message":
-            "Login successful",
+            "message": "Login successful",
             "data": {
-                "access_token":
-                token,
-
-                "token_type":
-                "bearer"
+                "access_token": token,
+                "token_type": "bearer"
             }
         }
 
+    # =========================
+    # CREATE ADMIN
+    # =========================
     @staticmethod
     async def create_admin(
         db: AsyncSession,
@@ -108,47 +103,20 @@ class SuperAdminService:
         )
 
         if existing_admin:
-
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already exists"
             )
 
-        upload_dir = (
-            "uploads/aadhaar"
-        )
-
-        os.makedirs(
-            upload_dir,
-            exist_ok=True
-        )
-
-        extension = (
-            aadhaar_file.filename
-            .split(".")[-1]
-        )
-
-        filename = (
-            f"{uuid.uuid4()}.{extension}"
-        )
-
-        file_path = os.path.join(
-            upload_dir,
-            filename
-        )
-
-        content = await (
-            aadhaar_file.read()
-        )
-
-        with open(
-            file_path,
-            "wb"
-        ) as file:
-
-            file.write(
-                content
+        if not aadhaar_file:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Aadhaar file is required"
             )
+
+        aadhaar_url = await upload_document_to_s3(
+            aadhaar_file
+        )
 
         admin = Admin(
             name=name,
@@ -157,7 +125,7 @@ class SuperAdminService:
                 password
             ),
             address=address,
-            aadhaar_file=file_path,
+            aadhaar_file=aadhaar_url,
             role="admin"
         )
 
@@ -171,20 +139,18 @@ class SuperAdminService:
 
         return {
             "success": True,
-            "message":
-            "Admin created successfully",
+            "message": "Admin created successfully",
             "data": {
-                "admin_id":
-                created_admin.admin_id,
-
-                "name":
-                created_admin.name,
-
-                "email":
-                created_admin.email
+                "admin_id": created_admin.admin_id,
+                "name": created_admin.name,
+                "email": created_admin.email,
+                "aadhaar_file": created_admin.aadhaar_file
             }
         }
 
+    # =========================
+    # GET ALL ADMINS
+    # =========================
     @staticmethod
     async def get_all_admins(
         db: AsyncSession
@@ -192,32 +158,11 @@ class SuperAdminService:
 
         admins = await (
             SuperAdminRepository
-            .get_all_admins(
-                db
-            )
+            .get_all_admins(db)
         )
 
         return {
             "success": True,
-            "message":
-            "Admins fetched successfully",
-            "data": [
-                {
-                    "admin_id":
-                    admin.admin_id,
-
-                    "name":
-                    admin.name,
-
-                    "email":
-                    admin.email,
-
-                    "address":
-                    admin.address,
-
-                    "aadhaar_file":
-                    admin.aadhaar_file
-                }
-                for admin in admins
-            ]
+            "message": "Admins fetched successfully",
+            "data": admins
         }

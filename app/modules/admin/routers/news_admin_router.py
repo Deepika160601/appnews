@@ -1,7 +1,10 @@
+
 from fastapi import (
     APIRouter,
     Depends,
-    Form
+    Form,
+    UploadFile,
+    File
 )
 
 from sqlalchemy.ext.asyncio import (
@@ -55,9 +58,9 @@ async def add_news(
 
     is_breaking: bool = Form(False),
 
-    thumbnail_url: str = Form(None),
+    thumbnail: UploadFile = File(...),
 
-    video_url: str = Form(None),
+    video: UploadFile = File(None),
 
     db: AsyncSession = Depends(get_db),
 
@@ -82,17 +85,15 @@ async def add_news(
         city=city,
         village=village,
 
-        is_breaking=is_breaking,
-
-        thumbnail_url=thumbnail_url,
-
-        video_url=video_url
+        is_breaking=is_breaking
     )
 
     return await create_news_service(
-        db,
-        data,
-        current_admin["admin_id"]
+        db=db,
+        data=data,
+        admin_id=current_admin["admin_id"],
+        thumbnail=thumbnail,
+        video=video
     )
 
 
@@ -137,6 +138,8 @@ async def publish_news(
         db,
         news_id
     )
+
+
 # =========================
 # DELETE NEWS
 # =========================
@@ -150,3 +153,4 @@ async def remove_news(
         db,
         news_id
     )
+

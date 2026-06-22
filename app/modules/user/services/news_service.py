@@ -27,11 +27,14 @@ from app.modules.admin.auth.admin_repository import (
     AdminRepository
 )
 
+from app.modules.user.repositories.news_view_repository import (
+    create_news_view
+)
+
 
 # =========================
 # GET LATEST NEWS
 # =========================
-
 async def get_latest_news_service(
     db: AsyncSession,
     current_user: dict
@@ -95,7 +98,6 @@ async def get_latest_news_service(
     # =========================
     # ADMIN / SUPERADMIN
     # =========================
-
     admin = await AdminRepository.get_admin_by_id(
         db,
         current_user["admin_id"]
@@ -137,7 +139,6 @@ async def get_latest_news_service(
 # =========================
 # GET NEWS DETAILS
 # =========================
-
 async def get_news_by_id_service(
     db: AsyncSession,
     news_id: int,
@@ -188,6 +189,17 @@ async def get_news_by_id_service(
             detail="News not found"
         )
 
+    # =========================
+    # TRACK NEWS VIEW
+    # =========================
+    if role == "user":
+
+        await create_news_view(
+            db=db,
+            user_id=user.user_id,
+            news_id=news_id
+        )
+
     return success_response(
         "News details fetched successfully",
         news
@@ -197,7 +209,6 @@ async def get_news_by_id_service(
 # =========================
 # SHARE NEWS
 # =========================
-
 async def share_news_service(
     db: AsyncSession,
     news_id: int

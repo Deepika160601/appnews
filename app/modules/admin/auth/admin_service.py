@@ -32,6 +32,8 @@ class AdminService:
     # =========================
     # ADMIN LOGIN
     # =========================
+    # ADMIN LOGIN
+    # =========================
     @staticmethod
     async def login_admin(
         db: AsyncSession,
@@ -46,8 +48,14 @@ class AdminService:
 
         if not admin:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Admin not found"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+
+        if admin.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only Admin can login here"
             )
 
         if not verify_password(
@@ -56,7 +64,7 @@ class AdminService:
         ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                detail="Invalid email or password"
             )
 
         token = create_access_token(
@@ -67,10 +75,14 @@ class AdminService:
             }
         )
 
-        return {
-            "access_token": token,
-            "token_type": "bearer"
-        }
+        return success_response(
+            "Login successful",
+            {
+                "access_token": token,
+                "token_type": "bearer"
+            }
+        )
+
 
     # =========================
     # ADMIN PROFILE

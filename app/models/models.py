@@ -7,32 +7,56 @@ from sqlalchemy import (
     ForeignKey,
     TIMESTAMP,
     DECIMAL,
-    Float
+    Float,DateTime
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.db import Base
- 
-# ========================
-## ========================
+
+
+from datetime import datetime
+
 # ========================
 # ADMINS
 # ========================
 class Admin(Base):
     __tablename__ = "admins"
 
-    admin_id = Column(Integer, primary_key=True)
+    admin_id = Column(
+        Integer,
+        primary_key=True
+    )
 
-    name = Column(String(100), nullable=False)
+    name = Column(
+        String(100),
+        nullable=False
+    )
 
-    email = Column(String(150), unique=True, nullable=False)
+    email = Column(
+        String(150),
+        unique=True,
+        nullable=False
+    )
 
-    password_hash = Column(Text, nullable=False)
+    password_hash = Column(
+        Text,
+        nullable=False
+    )
 
-    role = Column(String(50), default="admin")
-    address = Column(Text, nullable=True)
+    role = Column(
+        String(50),
+        default="admin"
+    )
 
-    aadhaar_file = Column(Text, nullable=True)  
+    address = Column(
+        Text,
+        nullable=True
+    )
+
+    aadhaar_file = Column(
+        Text,
+        nullable=True
+    )
 
     preferred_language = Column(
         String(10),
@@ -58,34 +82,42 @@ class Admin(Base):
         TIMESTAMP,
         server_default=func.now()
     )
+
+    # ========================
+    # RELATIONSHIPS
+    # ========================
+
     notifications = relationship(
-    "Notification",
-    back_populates="admin"
-)
-    # News created by admin
+        "Notification",
+        back_populates="admin"
+    )
+
     created_news = relationship(
         "News",
         foreign_keys="News.author_id",
         back_populates="author"
     )
 
-    # News approved by admin
     approved_news = relationship(
         "News",
         foreign_keys="News.approved_by",
         back_populates="approved_admin"
     )
+
     likes = relationship(
-    "Like",
-    back_populates="admin"
-)
+        "Like",
+        back_populates="admin"
+    )
+
     comments = relationship(
-    "Comment",
-    back_populates="admin"
-)
+        "Comment",
+        back_populates="admin"
+    )
+
     bookmarks = relationship(
-    "Bookmark"
-)
+        "Bookmark",
+        back_populates="admin"
+    )
 # ========================
 # # ========================
 # USERS
@@ -137,6 +169,12 @@ class User(Base):
         "UserActivity",
         back_populates="user"
     )
+    # News Views
+    views = relationship(
+    "NewsView",
+    back_populates="user",
+    cascade="all, delete-orphan"
+)
  
     notifications = relationship(
         "Notification",
@@ -328,6 +366,49 @@ class News(Base):
         back_populates="news",
         cascade="all, delete"
     )
+    views = relationship(
+    "NewsView",
+    back_populates="news",
+    cascade="all, delete-orphan"
+)
+    #-----NEWS VIEWS-------
+class NewsView(Base):
+
+    __tablename__ = "news_views"
+
+    view_id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    news_id = Column(
+        Integer,
+        ForeignKey("news.news_id"),
+        nullable=False
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=False
+    )
+
+    viewed_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    # Relationships
+    news = relationship(
+        "News",
+        back_populates="views"
+    )
+
+    user = relationship(
+        "User",
+        back_populates="views"
+    )
 # ========================
 # NEWS MEDIA
 # ========================
@@ -353,13 +434,15 @@ class NewsMedia(Base):
         "News",
         back_populates="media"
     )
-# ========================
 # LIKES
 # ========================
 class Like(Base):
     __tablename__ = "likes"
 
-    like_id = Column(Integer, primary_key=True)
+    like_id = Column(
+        Integer,
+        primary_key=True
+    )
 
     user_id = Column(
         Integer,
@@ -383,20 +466,21 @@ class Like(Base):
         server_default=func.now()
     )
 
+    # Relationships
     user = relationship(
         "User",
         back_populates="likes"
     )
 
     admin = relationship(
-        "Admin"
+        "Admin",
+        back_populates="likes"
     )
 
     news = relationship(
         "News",
         back_populates="likes"
     )
-# ========================
 # # ========================
 # COMMENTS
 # ========================
@@ -746,3 +830,4 @@ class NewsAudio(Base):
     # Relationships
     news = relationship("News", back_populates="audios")
  
+
