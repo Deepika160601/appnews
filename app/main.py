@@ -98,6 +98,9 @@ from app.modules.superadmin.categories.superadmin_category_router import (
 from app.modules.superadmin.analytics.superadmin_analytics_router import (
     router as superadmin_analytics_router
 )
+from app.modules.superadmin.locations.superadmin_location_router import (
+    router as superadmin_location_router
+)
 # ========================
 # ADMIN ROUTERS
 # ========================
@@ -173,6 +176,11 @@ app.include_router(
     superadmin_analytics_router,
     prefix="/superadmin/analytics",
     tags=["Super Admin Analytics"]
+)
+app.include_router(
+    superadmin_location_router,
+    prefix="/superadmin/locations",
+    tags=["Super Admin Locations"]
 )
 # ========================
 # ADMIN ROUTES

@@ -20,24 +20,7 @@ from app.modules.user.services.bookmark_service import (
     get_user_bookmarks_service,
     remove_bookmark_service
 )
-
 router = APIRouter()
-
-
-# =========================
-# DEBUG API
-# =========================
-@router.get("/debug")
-async def debug_bookmark(
-    current_user=Depends(get_current_admin_or_user)
-):
-    return {
-        "success": True,
-        "message": "Token Verified",
-        "data": current_user
-    }
-
-
 # =========================
 # ADD BOOKMARK
 # USER + ADMIN + SUPERADMIN
