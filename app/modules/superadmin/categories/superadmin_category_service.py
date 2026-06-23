@@ -3,9 +3,20 @@ from fastapi import (
     status
 )
 
+from sqlalchemy import (
+    select,
+    func
+)
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.utils.api_response import success_response
+from app.models.models import (
+    News
+)
+
+from app.utils.api_response import (
+    success_response
+)
 
 from app.modules.superadmin.categories.superadmin_category_repository import (
     create_category,
@@ -55,10 +66,10 @@ async def create_category_service(
     except HTTPException:
         raise
 
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to create category"
+            detail=str(e)
         )
 
 
@@ -94,6 +105,8 @@ async def get_all_categories_service(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+
 # =========================
 # DELETE CATEGORY
 # =========================
@@ -115,7 +128,20 @@ async def delete_category_service(
                 detail="Category not found"
             )
 
-        if category.news:
+        # Check whether news exists
+        news_count_result = await db.execute(
+            select(
+                func.count(News.news_id)
+            ).where(
+                News.category_id == category_id
+            )
+        )
+
+        news_count = (
+            news_count_result.scalar() or 0
+        )
+
+        if news_count > 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cannot delete category. News exists under this category."
@@ -136,8 +162,8 @@ async def delete_category_service(
     except HTTPException:
         raise
 
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to delete category"
+            detail=str(e)
         )

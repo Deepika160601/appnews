@@ -148,7 +148,9 @@ from app.modules.user.routers.search_router import (
     router as search_router
 )
 
-
+from app.modules.user.routers.user_category_router import (
+    router as user_category_router
+)
 # ========================
 # SUPER ADMIN ROUTES
 # ========================
@@ -242,6 +244,11 @@ app.include_router(
     search_router,
     prefix="/search",
     tags=["Search"]
+)
+app.include_router(
+    user_category_router,
+    prefix="/categories",
+    tags=["User Categories"]
 )
 
 # ========================

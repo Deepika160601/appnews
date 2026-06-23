@@ -103,3 +103,15 @@ class SuperAdminRepository:
             )
 
         return admin_list
+    @staticmethod
+    async def get_superadmin(
+    db: AsyncSession
+):
+
+     result = await db.execute(
+        select(Admin).where(
+            Admin.role == "superadmin"
+        )
+    )
+
+     return result.scalar_one_or_none() 

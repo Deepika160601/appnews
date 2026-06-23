@@ -38,7 +38,9 @@ from app.modules.user.repositories.user_repository import (
 from app.modules.user.repositories.notification_repository import (
     create_notification
 )
-
+from app.modules.superadmin.auth.superadmin_repository import (
+    SuperAdminRepository
+)
 
 # =========================
 # CREATE NEWS
@@ -224,8 +226,6 @@ async def get_news_by_id_service(
         "News fetched successfully",
         news
     )
-
-
 # =========================
 # PUBLISH NEWS
 # =========================
@@ -250,25 +250,31 @@ async def publish_news_service(
         news
     )
 
-    users = await UserRepository.get_all_users(
-        db
+    # Get Super Admin
+    superadmin = await (
+        SuperAdminRepository.get_superadmin(
+            db
+        )
     )
 
-    for user in users:
+    # Create Notification For Super Admin
+    if superadmin:
 
         await create_notification(
             db=db,
-            user_id=user.user_id,
+            admin_id=superadmin.admin_id,
             news_id=published_news.news_id,
-            title="Breaking News",
-            message=published_news.title
+            title="News Published",
+            message=(
+                f"Admin published news: "
+                f"{published_news.title}"
+            )
         )
 
     return success_response(
         "News published successfully",
         published_news
     )
-
 
 # =========================
 # DELETE NEWS
