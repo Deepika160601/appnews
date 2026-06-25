@@ -120,53 +120,123 @@ class Admin(Base):
     )
 # ========================
 # # ========================
+## ========================
 # USERS
 # ========================
 class User(Base):
     __tablename__ = "users"
- 
-    user_id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
-    email = Column(String(150), unique=True)
-    mobile_number = Column(String(15), unique=True, nullable=False)
-    password_hash = Column(Text, nullable=False)
-    preferred_language = Column(String(10), default="en")
- 
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
- 
+
+    user_id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    name = Column(
+        String(100),
+        nullable=False
+    )
+
+    email = Column(
+        String(150),
+        unique=True
+    )
+
+    mobile_number = Column(
+        String(15),
+        unique=True,
+        nullable=False
+    )
+
+    password_hash = Column(
+        Text,
+        nullable=False
+    )
+
+    preferred_language = Column(
+        String(10),
+        default="en"
+    )
+
+    latitude = Column(
+        Float,
+        nullable=True
+    )
+
+    longitude = Column(
+        Float,
+        nullable=True
+    )
+
+    city = Column(
+        String(100),
+        nullable=True
+    )
+
+    district = Column(
+        String(100),
+        nullable=True
+    )
+
+    state = Column(
+        String(100),
+        nullable=True
+    )
+
+    country = Column(
+        String(100),
+        nullable=True
+    )
+
     created_at = Column(
         TIMESTAMP,
         server_default=func.now()
     )
- 
+
     updated_at = Column(
         TIMESTAMP,
         server_default=func.now(),
         onupdate=func.now()
     )
+
     notification_enabled = Column(
-    Boolean,
-    default=True
-)
+        Boolean,
+        default=True
+    )
+
     # Relationships
     comments = relationship(
         "Comment",
         back_populates="user"
     )
- 
+
     likes = relationship(
         "Like",
         back_populates="user"
     )
- 
+
     bookmarks = relationship(
         "Bookmark",
         back_populates="user"
     )
- 
+
     activities = relationship(
         "UserActivity",
+        back_populates="user"
+    )
+
+    views = relationship(
+        "NewsView",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    notifications = relationship(
+        "Notification",
+        back_populates="user"
+    )
+
+    poll_votes = relationship(
+        "PollVote",
         back_populates="user"
     )
     # News Views

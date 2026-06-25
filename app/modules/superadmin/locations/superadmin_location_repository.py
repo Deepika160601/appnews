@@ -15,57 +15,55 @@ from app.models.models import (
 
 class SuperAdminLocationRepository:
 
-    # =========================
-    # GET LOCATION ANALYTICS
-    # =========================
-    @staticmethod
-    async def get_location_analytics(
-        db: AsyncSession
-    ):
+   # =========================
+# GET LOCATION ANALYTICS
+# =========================
+ @staticmethod
+ async def get_location_analytics(
+    db: AsyncSession
+):
 
-        # Total Users
-        users_result = await db.execute(
-            select(
-                func.count(
-                    User.user_id
+    result = await db.execute(
+        select(
+            User.city,
+            User.state,
+            func.count(
+                func.distinct(
+                    NewsView.user_id
                 )
-            )
+            ).label("active_readers")
         )
-
-        total_users = (
-            users_result.scalar() or 0
+        .join(
+            NewsView,
+            User.user_id == NewsView.user_id
         )
-
-        # Total Views
-        views_result = await db.execute(
-            select(
-                func.count(
-                    NewsView.view_id
+        .where(
+            User.city.is_not(None),
+            User.state.is_not(None)
+        )
+        .group_by(
+            User.city,
+            User.state
+        )
+        .order_by(
+            func.count(
+                func.distinct(
+                    NewsView.user_id
                 )
-            )
+            ).desc()
         )
+    )
 
-        total_views = (
-            views_result.scalar() or 0
-        )
+    locations = result.all()
 
-        # Active Readers
-        readers_result = await db.execute(
-            select(
-                func.count(
-                    func.distinct(
-                        NewsView.user_id
-                    )
-                )
-            )
-        )
+    return [
+        {
+            "city": item.city,
+            "state": item.state,
+            "active_readers": item.active_readers,
 
-        active_readers = (
-            readers_result.scalar() or 0
-        )
-
-        return {
-            "total_users": total_users,
-            "total_views": total_views,
-            "active_readers": active_readers
+            # Placeholder until you implement growth calculation
+            "growth_percentage": 0
         }
+        for item in locations
+    ]

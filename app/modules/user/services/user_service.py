@@ -276,7 +276,7 @@ class UserService:
             }
         )
 
-    # =========================
+      # =========================
     # UPDATE LOCATION
     # =========================
     @staticmethod
@@ -311,8 +311,19 @@ class UserService:
                 detail="Unable to determine coordinates"
             )
 
+        location = await get_location_from_coordinates(
+            latitude,
+            longitude
+        )
+
         user.latitude = latitude
         user.longitude = longitude
+
+        if location:
+            user.city = location.get("city")
+            user.district = location.get("district")
+            user.state = location.get("state")
+            user.country = location.get("country")
 
         await db.commit()
         await db.refresh(user)
@@ -320,7 +331,11 @@ class UserService:
         return success_response(
             "Location updated successfully",
             {
-                "latitude": latitude,
-                "longitude": longitude
+                "latitude": user.latitude,
+                "longitude": user.longitude,
+                "city": user.city,
+                "district": user.district,
+                "state": user.state,
+                "country": user.country
             }
         )
