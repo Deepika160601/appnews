@@ -25,7 +25,9 @@ DATABASE_URL = (
 # ========================
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True
+    echo=True,
+    pool_pre_ping=True,
+    pool_recycle=3600,
 )
 
 # ========================
@@ -51,6 +53,10 @@ async def get_db():
 
         try:
             yield db
+
+        except Exception:
+            await db.rollback()
+            raise
 
         finally:
             await db.close()
