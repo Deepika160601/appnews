@@ -84,7 +84,38 @@ async def upload_image_to_s3(
         f"https://{settings.AWS_S3_BUCKET_NAME}.s3."
         f"{settings.AWS_REGION}.amazonaws.com/{file_name}"
     )
+# =========================
+# UPLOAD CATEGORY IMAGE
+# =========================
+async def upload_category_image_to_s3(
+    file: UploadFile
+):
 
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid category image format"
+        )
+
+    extension = file.filename.split(".")[-1]
+
+    file_name = (
+        f"categories/{uuid.uuid4()}.{extension}"
+    )
+
+    s3_client.upload_fileobj(
+        file.file,
+        settings.AWS_S3_BUCKET_NAME,
+        file_name,
+        ExtraArgs={
+            "ContentType": file.content_type
+        }
+    )
+
+    return (
+        f"https://{settings.AWS_S3_BUCKET_NAME}.s3."
+        f"{settings.AWS_REGION}.amazonaws.com/{file_name}"
+    )
 
 # =========================
 # UPLOAD VIDEO

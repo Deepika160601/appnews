@@ -17,12 +17,14 @@ from app.models.models import (
 async def create_category(
     db: AsyncSession,
     name: str,
-    description: str
+    description: str,
+    image_url: str | None = None
 ):
 
     category = Category(
         name=name,
-        description=description
+        description=description,
+        image_url=image_url
     )
 
     db.add(category)
@@ -77,7 +79,9 @@ async def get_all_categories(
 
     total_news_result = await db.execute(
         select(
-            func.count(News.news_id)
+            func.count(
+                News.news_id
+            )
         )
     )
 
@@ -90,6 +94,7 @@ async def get_all_categories(
             Category.category_id,
             Category.name,
             Category.description,
+            Category.image_url,
             func.count(
                 News.news_id
             ).label("total_posts")
@@ -100,6 +105,12 @@ async def get_all_categories(
             Category.category_id
         )
         .group_by(
+            Category.category_id,
+            Category.name,
+            Category.description,
+            Category.image_url
+        )
+        .order_by(
             Category.category_id
         )
     )
@@ -139,6 +150,9 @@ async def get_all_categories(
                 "description":
                     category.description,
 
+                "image_url":
+                    category.image_url,
+
                 "total_posts":
                     category.total_posts,
 
@@ -164,3 +178,4 @@ async def delete_category(
     await db.delete(category)
 
     await db.commit()
+    # =========================

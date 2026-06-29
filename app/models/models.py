@@ -264,6 +264,10 @@ class Category(Base):
     category_id = Column(Integer, primary_key=True)
     name = Column(String(50), unique=True, nullable=False)
     description = Column(Text)
+    image_url = Column(
+    Text,
+    nullable=True
+)
  
     # Relationships
     news = relationship("News", back_populates="category")

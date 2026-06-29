@@ -1,6 +1,9 @@
 from fastapi import (
     APIRouter,
-    Depends
+    Depends,
+    UploadFile,
+    File,
+    Form
 )
 
 from sqlalchemy.ext.asyncio import (
@@ -13,14 +16,11 @@ from app.core.security import (
     get_current_superadmin
 )
 
-from app.modules.superadmin.categories.superadmin_category_schema import (
-    CategoryCreateRequest
-)
-
 from app.modules.superadmin.categories.superadmin_category_service import (
     create_category_service,
     get_all_categories_service,
     delete_category_service
+    
 )
 
 router = APIRouter(
@@ -35,13 +35,17 @@ router = APIRouter(
 # =========================
 @router.post("/")
 async def create_category(
-    data: CategoryCreateRequest,
+    name: str = Form(...),
+    description: str = Form(...),
+    image: UploadFile = File(...),
     db: AsyncSession = Depends(get_db)
 ):
 
     return await create_category_service(
-        db,
-        data
+        db=db,
+        name=name,
+        description=description,
+        image=image
     )
 
 
@@ -56,8 +60,6 @@ async def get_categories(
     return await get_all_categories_service(
         db
     )
-
-
 # =========================
 # DELETE CATEGORY
 # =========================

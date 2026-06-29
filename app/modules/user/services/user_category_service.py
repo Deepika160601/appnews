@@ -23,7 +23,8 @@ class UserCategoryService:
             {
                 "category_id": category.category_id,
                 "name": category.name,
-                "description": category.description
+                "description": category.description,
+                "image_url": category.image_url
             }
             for category in categories
         ]

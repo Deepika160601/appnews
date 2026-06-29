@@ -1,5 +1,6 @@
 from fastapi import (
     HTTPException,
+    UploadFile,
     status
 )
 
@@ -18,28 +19,33 @@ from app.utils.api_response import (
     success_response
 )
 
+from app.utils.s3_helper import (
+    upload_category_image_to_s3
+)
+
 from app.modules.superadmin.categories.superadmin_category_repository import (
     create_category,
     get_category_by_name,
     get_category_by_id,
     get_all_categories,
     delete_category
+    
 )
-
-
 # =========================
 # CREATE CATEGORY
 # =========================
 async def create_category_service(
     db: AsyncSession,
-    data
+    name: str,
+    description: str,
+    image: UploadFile | None = None
 ):
 
     try:
 
         existing_category = await get_category_by_name(
             db,
-            data.name
+            name
         )
 
         if existing_category:
@@ -48,10 +54,18 @@ async def create_category_service(
                 detail="Category already exists"
             )
 
+        image_url = None
+
+        if image:
+            image_url = await upload_category_image_to_s3(
+                image
+            )
+
         category = await create_category(
-            db,
-            data.name,
-            data.description
+            db=db,
+            name=name,
+            description=description,
+            image_url=image_url
         )
 
         return success_response(
@@ -59,7 +73,8 @@ async def create_category_service(
             {
                 "category_id": category.category_id,
                 "name": category.name,
-                "description": category.description
+                "description": category.description,
+                "image_url": category.image_url
             }
         )
 
@@ -105,8 +120,6 @@ async def get_all_categories_service(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
-
-
 # =========================
 # DELETE CATEGORY
 # =========================
@@ -128,10 +141,11 @@ async def delete_category_service(
                 detail="Category not found"
             )
 
-        # Check whether news exists
         news_count_result = await db.execute(
             select(
-                func.count(News.news_id)
+                func.count(
+                    News.news_id
+                )
             ).where(
                 News.category_id == category_id
             )
