@@ -90,3 +90,27 @@ class LocationUpdateRequest(BaseModel):
     state: str
     district: str
     mandal: str
+
+
+    # =========================
+# BECOME ADMIN REQUEST
+# =========================
+class AdminRequestCreate(BaseModel):
+    reason: str
+    government_id_type: Literal[
+        "Aadhaar",
+        "PAN",
+        "Driving License",
+        "Passport",
+        "Voter ID"
+    ]
+
+    address: Optional[str] = None
+    experience: Optional[str] = None
+
+
+# =========================
+# REJECT ADMIN REQUEST
+# =========================
+class RejectAdminRequest(BaseModel):
+    rejection_reason: str

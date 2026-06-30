@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.models import (
     Admin,
-    News
+    News,
+    User,
+    AdminRequest
 )
 
 
@@ -115,3 +117,98 @@ class SuperAdminRepository:
     )
 
      return result.scalar_one_or_none() 
+        # =========================
+    # GET ADMIN REQUESTS
+    # =========================
+    @staticmethod
+    async def get_all_admin_requests(
+        db: AsyncSession
+    ):
+
+        result = await db.execute(
+            select(AdminRequest)
+            .order_by(
+                AdminRequest.created_at.desc()
+            )
+        )
+
+        return result.scalars().all()
+
+
+    # =========================
+    # GET ADMIN REQUEST BY ID
+    # =========================
+    @staticmethod
+    async def get_admin_request_by_id(
+        db: AsyncSession,
+        request_id: int
+    ):
+
+        result = await db.execute(
+            select(AdminRequest).where(
+                AdminRequest.request_id == request_id
+            )
+        )
+
+        return result.scalar_one_or_none()
+
+
+    # =========================
+    # GET USER BY ID
+    # =========================
+    @staticmethod
+    async def get_user_by_id(
+        db: AsyncSession,
+        user_id: int
+    ):
+
+        result = await db.execute(
+            select(User).where(
+                User.user_id == user_id
+            )
+        )
+
+        return result.scalar_one_or_none()
+
+
+    # =========================
+    # UPDATE ADMIN REQUEST
+    # =========================
+    @staticmethod
+    async def update_admin_request(
+        db: AsyncSession,
+        admin_request: AdminRequest
+    ):
+
+        await db.commit()
+
+        await db.refresh(admin_request)
+
+        return admin_request
+    # =========================
+# GET ADMIN BY USER EMAIL
+# =========================
+@staticmethod
+async def get_admin_by_user_email(
+    db: AsyncSession,
+    email: str
+):
+
+    result = await db.execute(
+        select(Admin).where(
+            Admin.email == email
+        )
+    )
+
+    return result.scalar_one_or_none()
+
+
+# =========================
+# SAVE CHANGES
+# =========================
+@staticmethod
+async def save_changes(
+    db: AsyncSession
+):
+
+    await db.commit()

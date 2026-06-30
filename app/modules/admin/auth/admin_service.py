@@ -29,9 +29,6 @@ from app.utils.api_response import (
 
 class AdminService:
 
-    # =========================
-    # ADMIN LOGIN
-    # =========================
     # ADMIN LOGIN
     # =========================
     @staticmethod
@@ -208,40 +205,7 @@ class AdminService:
                 "posted_news": posted_news
             }
         }
-        # =========================
-    # UPDATE LANGUAGE
-    # =========================
-    @staticmethod
-    async def update_language(
-        db: AsyncSession,
-        admin_id: int,
-        preferred_language: str
-    ):
-
-        admin = await AdminRepository.get_admin_by_id(
-            db,
-            admin_id
-        )
-
-        if not admin:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Admin not found"
-            )
-
-        admin.preferred_language = preferred_language
-
-        await db.commit()
-        await db.refresh(admin)
-
-        return success_response(
-            "Language updated successfully",
-            {
-                "preferred_language": admin.preferred_language
-            }
-        )
-
-    # =========================
+          # =========================
     # UPDATE LOCATION
     # =========================
     @staticmethod
@@ -253,6 +217,7 @@ class AdminService:
         mandal: str
     ):
 
+        # Check if admin exists
         admin = await AdminRepository.get_admin_by_id(
             db,
             admin_id
@@ -261,21 +226,78 @@ class AdminService:
         if not admin:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Admin not found"
+                detail="Admin not found."
             )
 
-        latitude, longitude = await get_coordinates_from_location(
-            state,
-            district,
-            mandal
-        )
+        # Get coordinates from entered location
+        try:
+            latitude, longitude = await get_coordinates_from_location(
+                state,
+                district,
+                mandal
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Location service is temporarily unavailable. Please try again later."
+            )
 
+        # Invalid location
         if latitude is None or longitude is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unable to determine coordinates"
+                detail="Invalid location. Please enter a valid State, District, and Mandal."
             )
 
+        # Verify location
+        try:
+            location = await get_location_from_coordinates(
+                latitude,
+                longitude
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Unable to verify the provided location. Please try again later."
+            )
+
+        if not location:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Location verification failed."
+            )
+
+        # Validate State
+        returned_state = (
+            location.get("state") or ""
+        ).strip().lower()
+
+        entered_state = (
+            state or ""
+        ).strip().lower()
+
+        if returned_state != entered_state:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid state. Please enter a valid state."
+            )
+
+        # Validate District
+        returned_district = (
+            location.get("district") or ""
+        ).strip().lower()
+
+        entered_district = (
+            district or ""
+        ).strip().lower()
+
+        if returned_district != entered_district:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid district. Please enter a valid district."
+            )
+
+        # Update admin location
         admin.latitude = latitude
         admin.longitude = longitude
 
@@ -285,7 +307,7 @@ class AdminService:
         return success_response(
             "Location updated successfully",
             {
-                "latitude": latitude,
-                "longitude": longitude
+                "latitude": admin.latitude,
+                "longitude": admin.longitude
             }
         )

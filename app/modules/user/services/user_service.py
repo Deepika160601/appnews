@@ -1,4 +1,8 @@
-from fastapi import HTTPException, status
+from fastapi import (
+    HTTPException,
+    UploadFile,
+    status
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.models import (
@@ -7,7 +11,8 @@ from app.models.models import (
     Like,
     Comment,
     PollVote,
-    Notification
+    Notification,
+    AdminRequest
 )
 from app.utils.location_helper import (
     get_location_from_coordinates,
@@ -27,7 +32,12 @@ from app.modules.user.repositories.user_repository import (
     UserRepository
 )
 
-
+from app.utils.s3_helper import (
+    upload_document_to_s3
+)
+from app.modules.user.repositories.notification_repository import (
+    create_notification
+)
 class UserService:
 
     # =========================
@@ -275,8 +285,7 @@ class UserService:
                 "preferred_language": user.preferred_language
             }
         )
-
-      # =========================
+#    # =========================
     # UPDATE LOCATION
     # =========================
     @staticmethod
@@ -288,6 +297,7 @@ class UserService:
         mandal: str
     ):
 
+        # Check if user exists
         user = await UserRepository.get_user_by_id(
             db,
             user_id
@@ -296,34 +306,84 @@ class UserService:
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                detail="User not found."
             )
 
-        latitude, longitude = await get_coordinates_from_location(
-            state,
-            district,
-            mandal
-        )
+        # Get coordinates from the entered location
+        try:
+            latitude, longitude = await get_coordinates_from_location(
+                state,
+                district,
+                mandal
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Location service is temporarily unavailable. Please try again later."
+            )
 
+        # Invalid location
         if latitude is None or longitude is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unable to determine coordinates"
+                detail="Invalid location. Please enter a valid State, District, and Mandal."
             )
 
-        location = await get_location_from_coordinates(
-            latitude,
-            longitude
-        )
+        # Reverse geocode to verify location
+        try:
+            location = await get_location_from_coordinates(
+                latitude,
+                longitude
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Unable to verify the provided location. Please try again later."
+            )
 
+        if not location:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Location verification failed."
+            )
+
+        # Validate State
+        returned_state = (
+            location.get("state") or ""
+        ).strip().lower()
+
+        entered_state = (
+            state or ""
+        ).strip().lower()
+
+        if returned_state != entered_state:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid state. Please enter a valid state."
+            )
+
+        # Validate District
+        returned_district = (
+            location.get("district") or ""
+        ).strip().lower()
+
+        entered_district = (
+            district or ""
+        ).strip().lower()
+
+        if returned_district != entered_district:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid district. Please enter a valid district."
+            )
+
+        # Update user location
         user.latitude = latitude
         user.longitude = longitude
-
-        if location:
-            user.city = location.get("city")
-            user.district = location.get("district")
-            user.state = location.get("state")
-            user.country = location.get("country")
+        user.state = location.get("state")
+        user.district = location.get("district")
+        user.city = location.get("city")
+        user.country = location.get("country")
 
         await db.commit()
         await db.refresh(user)
@@ -337,5 +397,86 @@ class UserService:
                 "district": user.district,
                 "state": user.state,
                 "country": user.country
+            }
+        )
+        # =========================
+    # REQUEST TO BECOME ADMIN
+    # =========================
+    @staticmethod
+    async def request_become_admin(
+        db: AsyncSession,
+        user_id: int,
+        reason: str,
+        government_id_type: str,
+        address: str,
+        experience: str,
+        government_id: UploadFile
+    ):
+
+        # Check user
+        user = await UserRepository.get_user_by_id(
+            db,
+            user_id
+        )
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found."
+            )
+
+        # Check pending request
+        pending_request = await UserRepository.get_pending_admin_request(
+            db,
+            user_id
+        )
+
+        if pending_request:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="You already have a pending admin request."
+            )
+
+        # Upload Government ID
+        try:
+            government_id_url = await upload_document_to_s3(
+                government_id
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Unable to upload Government ID. Please try again later."
+            )
+
+        # Create request
+        admin_request = AdminRequest(
+            user_id=user.user_id,
+            reason=reason,
+            government_id_type=government_id_type,
+            government_id_url=government_id_url,
+            address=address,
+            experience=experience,
+            status="Pending"
+        )
+
+        await UserRepository.create_admin_request(
+            db,
+            admin_request
+        )
+
+        # Notify Super Admin
+        await create_notification(
+            db=db,
+            news_id=None,
+            title="New Admin Request",
+            message=f"{user.name} has requested to become an Admin.",
+            admin_id=1
+        )
+
+        return success_response(
+            "Admin request submitted successfully.",
+            {
+                "request_id": admin_request.request_id,
+                "status": admin_request.status
             }
         )

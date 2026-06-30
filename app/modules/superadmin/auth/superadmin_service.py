@@ -21,7 +21,15 @@ from app.utils.s3_helper import (
 from app.modules.superadmin.auth.superadmin_repository import (
     SuperAdminRepository
 )
+from datetime import datetime
 
+from app.models.models import (
+    AdminRequest
+)
+
+from app.modules.user.repositories.notification_repository import (
+    create_notification
+)
 
 class SuperAdminService:
 
@@ -165,4 +173,86 @@ class SuperAdminService:
             "success": True,
             "message": "Admins fetched successfully",
             "data": admins
+        }
+        # =========================
+    # APPROVE / REJECT ADMIN REQUEST
+    # =========================
+    @staticmethod
+    async def update_admin_request_status(
+        db: AsyncSession,
+        request_id: int,
+        status: str,
+        rejection_reason: str = None,
+        superadmin_id: int = None
+    ):
+
+        admin_request = await (
+            SuperAdminRepository.get_admin_request_by_id(
+                db,
+                request_id
+            )
+        )
+
+        if not admin_request:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Admin request not found."
+            )
+
+        if admin_request.status != "Pending":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This request has already been processed."
+            )
+
+        if status not in ["Approved", "Rejected"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid status."
+            )
+
+        if (
+            status == "Rejected"
+            and not rejection_reason
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Rejection reason is required."
+            )
+
+        admin_request.status = status
+        admin_request.reviewed_by = superadmin_id
+        admin_request.reviewed_at = datetime.utcnow()
+
+        if status == "Rejected":
+            admin_request.rejection_reason = rejection_reason
+
+        await SuperAdminRepository.update_admin_request(
+            db,
+            admin_request
+        )
+
+        # Notify User
+        await create_notification(
+            db=db,
+            news_id=None,
+            user_id=admin_request.user_id,
+            title="Admin Request Update",
+            message=(
+                "Congratulations! Your admin request has been approved."
+                if status == "Approved"
+                else f"Your admin request has been rejected. Reason: {rejection_reason}"
+            )
+        )
+
+        return {
+            "success": True,
+            "message": f"Admin request {status.lower()} successfully.",
+            "data": {
+                "request_id": admin_request.request_id,
+                "status": admin_request.status,
+                "reviewed_by": admin_request.reviewed_by,
+                "reviewed_at": admin_request.reviewed_at,
+                "rejection_reason": admin_request.rejection_reason
+            }
         }

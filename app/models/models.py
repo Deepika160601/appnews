@@ -118,8 +118,77 @@ class Admin(Base):
         "Bookmark",
         back_populates="admin"
     )
-# ========================
-# # ========================
+
+    #=============ADMIN REQUEST===============
+    #==========================================
+class AdminRequest(Base):
+    __tablename__ = "admin_requests"
+
+    request_id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=False
+    )
+
+    reason = Column(
+        Text,
+        nullable=False
+    )
+
+    government_id_type = Column(
+        String(50),
+        nullable=False
+    )   # Aadhaar / PAN / Driving License / Passport
+
+    government_id_url = Column(
+        Text,
+        nullable=False
+    )
+
+    address = Column(
+        Text,
+        nullable=True
+    )
+
+    experience = Column(
+        Text,
+        nullable=True
+    )
+
+    status = Column(
+        String(20),
+        default="Pending"
+    )   # Pending / Approved / Rejected
+
+    rejection_reason = Column(
+        Text,
+        nullable=True
+    )
+
+    reviewed_by = Column(
+        Integer,
+        ForeignKey("admins.admin_id"),
+        nullable=True
+    )
+
+    created_at = Column(
+        TIMESTAMP,
+        server_default=func.now()
+    )
+
+    reviewed_at = Column(
+        TIMESTAMP,
+        nullable=True
+    )
+
+    user = relationship("User")
+
+    reviewer = relationship("Admin")
 ## ========================
 # USERS
 # ========================
@@ -859,10 +928,10 @@ class Notification(Base):
     )
 
     news_id = Column(
-        Integer,
-        ForeignKey("news.news_id")
+    Integer,
+    ForeignKey("news.news_id"),
+    nullable=True
     )
-
     title = Column(Text)
     message = Column(Text)
 

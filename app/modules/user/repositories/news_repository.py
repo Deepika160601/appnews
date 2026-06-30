@@ -10,10 +10,7 @@ from app.models.models import (
     NewsTranslation
 )
 from app.utils.translator import translate_text
-
 # =========================
-## =========================
-## =========================
 # GET TRANSLATION
 # =========================
 

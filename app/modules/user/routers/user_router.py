@@ -15,7 +15,11 @@ from app.core.security import (
     get_current_user,
     get_current_admin_or_user
 )
-
+from fastapi import (
+    File,
+    UploadFile,
+    Form
+)
 from app.modules.admin.auth.admin_service import (
     AdminService
 )
@@ -140,4 +144,27 @@ async def update_location(
         request.state,
         request.district,
         request.mandal
+    )
+# =========================
+# REQUEST TO BECOME ADMIN
+# =========================
+@router.post("/admin-request")
+async def request_become_admin(
+    reason: str = Form(...),
+    government_id_type: str = Form(...),
+    address: str = Form(...),
+    experience: str = Form(None),
+    government_id: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+
+    return await UserService.request_become_admin(
+        db=db,
+        user_id=current_user["user_id"],
+        reason=reason,
+        government_id_type=government_id_type,
+        address=address,
+        experience=experience,
+        government_id=government_id
     )

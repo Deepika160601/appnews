@@ -7,6 +7,9 @@ from fastapi import (
 )
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.modules.superadmin.auth.superadmin_schema import (
+    AdminRequestActionRequest
+)
 
 from app.db.db import get_db
 
@@ -89,4 +92,26 @@ async def get_all_admins(
 
     return await SuperAdminService.get_all_admins(
         db
+    )
+# =========================
+# APPROVE / REJECT ADMIN REQUEST
+# SUPER ADMIN ONLY 🔒
+# =========================
+@router.put(
+    "/admin-requests/{request_id}",
+    dependencies=[Depends(get_current_superadmin)]
+)
+async def update_admin_request_status(
+    request_id: int,
+    request: AdminRequestActionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_superadmin=Depends(get_current_superadmin)
+):
+
+    return await SuperAdminService.update_admin_request_status(
+        db=db,
+        request_id=request_id,
+        status=request.status,
+        rejection_reason=request.rejection_reason,
+        superadmin_id=current_superadmin["admin_id"]
     )
