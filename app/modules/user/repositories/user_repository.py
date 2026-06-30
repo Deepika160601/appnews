@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.models import User
 from app.models.models import AdminRequest
 
-
 class UserRepository:
 
     # =========================

@@ -25,19 +25,18 @@ router = APIRouter()
 
 
 # =========================
-# ADMIN LOGIN
+# LOGIN (ADMIN / USER)
 # PUBLIC API
 # =========================
 @router.post("/login")
-async def login_admin(
+async def login(
     request: AdminLoginRequest,
     db: AsyncSession = Depends(get_db)
 ):
-
-    return await AdminService.login_admin(
-        db,
-        request.email,
-        request.password
+    return await AdminService.login(
+        db=db,
+        email=request.email,
+        password=request.password
     )
 
 
@@ -53,7 +52,6 @@ async def get_admin_profile(
     db: AsyncSession = Depends(get_db),
     current_admin=Depends(get_current_admin)
 ):
-
     return await AdminService.get_profile(
         db,
         current_admin["admin_id"]

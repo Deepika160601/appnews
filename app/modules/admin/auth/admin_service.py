@@ -2,6 +2,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
+from app.modules.user.repositories.user_repository import UserRepository
+
 from app.core.security import (
     verify_password,
     create_access_token
@@ -27,60 +29,95 @@ from app.utils.api_response import (
 )
 
 
+
 class AdminService:
 
-    # ADMIN LOGIN
+# =========================
+    # LOGIN (ADMIN / USER)
     # =========================
     @staticmethod
-    async def login_admin(
+    async def login(
         db: AsyncSession,
         email: str,
         password: str
     ):
 
+        # -------------------------
+        # Check Admin
+        # -------------------------
         admin = await AdminRepository.get_admin_by_email(
             db,
             email
         )
 
-        if not admin:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
+        if admin:
+
+            if not verify_password(
+                password,
+                admin.password_hash
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid email or password"
+                )
+
+            token = create_access_token(
+                {
+                    "admin_id": admin.admin_id,
+                    "email": admin.email,
+                    "role": admin.role
+                }
             )
 
-        if admin.role != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only Admin can login here"
+            return success_response(
+                "Login successful",
+                {
+                    "access_token": token,
+                    "token_type": "bearer",
+                    "role": admin.role
+                }
             )
 
-        if not verify_password(
-            password,
-            admin.password_hash
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
-            )
-
-        token = create_access_token(
-            {
-                "admin_id": admin.admin_id,
-                "email": admin.email,
-                "role": admin.role
-            }
+        # -------------------------
+        # Check User
+        # -------------------------
+        user = await UserRepository.get_user_by_email(
+            db,
+            email
         )
 
-        return success_response(
-            "Login successful",
-            {
-                "access_token": token,
-                "token_type": "bearer"
-            }
+        if user:
+
+            if not verify_password(
+                password,
+                user.password_hash
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid email or password"
+                )
+
+            token = create_access_token(
+                {
+                    "user_id": user.user_id,
+                    "email": user.email,
+                    "role": "user"
+                }
+            )
+
+            return success_response(
+                "Login successful",
+                {
+                    "access_token": token,
+                    "token_type": "bearer",
+                    "role": "user"
+                }
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
         )
-
-
     # =========================
     # ADMIN PROFILE
     # =========================

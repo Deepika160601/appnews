@@ -52,6 +52,7 @@ app = FastAPI(
 )
 
 # ========================
+# ========================
 # CORS MIDDLEWARE
 # ========================
 app.add_middleware(
@@ -63,12 +64,13 @@ app.add_middleware(
         "http://127.0.0.1:3001",
         "http://13.235.0.6:3000",
         "http://13.206.189.12:3000",
+        "http://18.60.44.68:3000",
+        "http://18.60.233.15:3000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # ========================
 # GLOBAL HTTP EXCEPTION HANDLER
 # ========================
