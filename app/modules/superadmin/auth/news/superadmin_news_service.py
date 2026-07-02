@@ -4,6 +4,7 @@ from fastapi import (
 )
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.utils.api_response import success_response
 
@@ -14,6 +15,9 @@ from app.modules.superadmin.auth.news.superadmin_news_repository import (
 
 class SuperAdminNewsService:
 
+    # =========================
+    # GET ALL NEWS
+    # =========================
     @staticmethod
     async def get_all_news(
         db: AsyncSession
@@ -70,34 +74,76 @@ class SuperAdminNewsService:
             "News fetched successfully",
             data
         )
+
+    # =========================
+    # DELETE NEWS
+    # =========================
     @staticmethod
     async def delete_news(
         db: AsyncSession,
         news_id: int
     ):
 
-        news = await (
-            SuperAdminNewsRepository
-            .get_news_by_id(
-                db,
-                news_id
-            )
-        )
+        try:
 
-        if not news:
+            # -------------------------
+            # Validate News ID
+            # -------------------------
+            if news_id <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid news ID."
+                )
+
+            # -------------------------
+            # Get News
+            # -------------------------
+            news = await (
+                SuperAdminNewsRepository
+                .get_news_by_id(
+                    db,
+                    news_id
+                )
+            )
+
+            if not news:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="News not found."
+                )
+
+            # -------------------------
+            # Delete News
+            # -------------------------
+            await (
+                SuperAdminNewsRepository
+                .delete_news(
+                    db,
+                    news
+                )
+            )
+
+            # -------------------------
+            # Success Response
+            # -------------------------
+            return success_response(
+                "News deleted successfully"
+            )
+
+        except HTTPException:
+            await db.rollback()
+            raise
+
+        except SQLAlchemyError:
+            await db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="News not found"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Database error occurred while deleting news."
             )
 
-        await (
-            SuperAdminNewsRepository
-            .delete_news(
-                db,
-                news
+        except Exception:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred while deleting news."
             )
-        )
-
-        return success_response(
-            "News deleted successfully"
-        )

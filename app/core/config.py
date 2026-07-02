@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     AWS_REGION: str
     AWS_S3_BUCKET_NAME: str
 
+    # ========================
+    # FRONTEND
+    # ========================
+    FRONTEND_URL: str
+
     class Config:
         env_file = ".env"
 

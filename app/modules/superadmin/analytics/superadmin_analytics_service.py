@@ -56,6 +56,19 @@ class SuperAdminAnalyticsService:
             .get_language_consumption(db)
         )
 
+        if (
+            live_visitors is None
+            and hourly_views is None
+            and top_categories is None
+            and top_locations is None
+            and top_admins is None
+            and language_consumption is None
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Analytics data not found."
+            )
+
         hourly_data = []
 
         for hour in range(24):

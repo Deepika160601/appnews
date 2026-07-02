@@ -10,6 +10,18 @@ from app.models.models import (
     NewsTranslation
 )
 from app.utils.translator import translate_text
+import re
+from app.core.config import settings
+
+# =========================
+# GENERATE SEO SLUG
+# =========================
+def generate_slug(title: str) -> str:
+    slug = title.lower()
+    slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = re.sub(r"\s+", "-", slug.strip())
+    slug = re.sub(r"-+", "-", slug)
+    return slug
 # =========================
 # GET TRANSLATION
 # =========================
@@ -359,14 +371,25 @@ async def share_news(
     if not news:
         return None
 
+    # Increment share count
     news.share_count += 1
 
     await db.commit()
-
     await db.refresh(news)
+
+    # Generate SEO-friendly slug
+    slug = generate_slug(news.title)
+
+    # Generate share URL
+    share_url = (
+        f"{settings.FRONTEND_URL}/news/"
+        f"{news.news_id}/{slug}"
+    )
 
     return {
         "news_id": news.news_id,
         "title": news.title,
-        "share_count": news.share_count
+        "summary": news.summary,
+        "share_count": news.share_count,
+        "share_url": share_url
     }

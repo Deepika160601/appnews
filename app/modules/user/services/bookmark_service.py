@@ -21,13 +21,36 @@ from app.modules.user.repositories.notification_repository import (
 )
 
 
+# =========================
+# ADD BOOKMARK
+# =========================
 async def add_bookmark_service(
     db: AsyncSession,
     current_user: dict,
     news_id: int
 ):
 
+    # Validate Current User
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
+    # Validate News ID
+    if news_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid news ID."
+        )
+
     role = current_user.get("role")
+
+    if role not in ["user", "admin", "superadmin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unauthorized user."
+        )
 
     user_id = None
     admin_id = None
@@ -35,8 +58,20 @@ async def add_bookmark_service(
     if role == "user":
         user_id = current_user.get("user_id")
 
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User authentication failed."
+            )
+
     elif role in ["admin", "superadmin"]:
         admin_id = current_user.get("admin_id")
+
+        if not admin_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Admin authentication failed."
+            )
 
     bookmark = await add_bookmark(
         db=db,
@@ -48,7 +83,7 @@ async def add_bookmark_service(
     if bookmark == "already_bookmarked":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="News already bookmarked"
+            detail="News is already bookmarked."
         )
 
     result = await db.execute(
@@ -59,13 +94,19 @@ async def add_bookmark_service(
 
     news = result.scalar_one_or_none()
 
-    if news and news.author_id:
+    if not news:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="News not found."
+        )
+
+    if news.author_id:
         await create_notification(
             db=db,
             admin_id=news.author_id,
             news_id=news.news_id,
             title="New Bookmark",
-            message="Someone bookmarked your news"
+            message="Your news has been bookmarked."
         )
 
     return success_response(
@@ -78,12 +119,28 @@ async def add_bookmark_service(
     )
 
 
+# =========================
+# GET USER BOOKMARKS
+# =========================
 async def get_user_bookmarks_service(
     db: AsyncSession,
     current_user: dict
 ):
 
+    # Validate Current User
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
     role = current_user.get("role")
+
+    if role not in ["user", "admin", "superadmin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unauthorized user."
+        )
 
     user_id = None
     admin_id = None
@@ -91,8 +148,20 @@ async def get_user_bookmarks_service(
     if role == "user":
         user_id = current_user.get("user_id")
 
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User authentication failed."
+            )
+
     elif role in ["admin", "superadmin"]:
         admin_id = current_user.get("admin_id")
+
+        if not admin_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Admin authentication failed."
+            )
 
     bookmarks = await get_user_bookmarks(
         db=db,
@@ -100,19 +169,48 @@ async def get_user_bookmarks_service(
         admin_id=admin_id
     )
 
+    if not bookmarks:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No bookmarks found."
+        )
+
     return success_response(
         "Bookmarks fetched successfully",
         bookmarks
     )
 
 
+# =========================
+# REMOVE BOOKMARK
+# =========================
 async def remove_bookmark_service(
     db: AsyncSession,
     current_user: dict,
     news_id: int
 ):
 
+    # Validate Current User
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
+    # Validate News ID
+    if news_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid news ID."
+        )
+
     role = current_user.get("role")
+
+    if role not in ["user", "admin", "superadmin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unauthorized user."
+        )
 
     user_id = None
     admin_id = None
@@ -120,8 +218,20 @@ async def remove_bookmark_service(
     if role == "user":
         user_id = current_user.get("user_id")
 
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User authentication failed."
+            )
+
     elif role in ["admin", "superadmin"]:
         admin_id = current_user.get("admin_id")
+
+        if not admin_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Admin authentication failed."
+            )
 
     bookmark = await remove_bookmark(
         db=db,
@@ -133,7 +243,7 @@ async def remove_bookmark_service(
     if not bookmark:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Bookmark not found"
+            detail="Bookmark not found."
         )
 
     return success_response(

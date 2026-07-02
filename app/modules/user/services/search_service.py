@@ -22,12 +22,16 @@ async def search_news_service(
     keyword: str
 ):
 
-    if not keyword.strip():
-
+    # -------------------------
+    # Validate Keyword
+    # -------------------------
+    if not keyword or not keyword.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Keyword is required"
+            detail="Search keyword is required."
         )
+
+    keyword = keyword.strip()
 
     news = await search_news(
         db,
@@ -35,10 +39,9 @@ async def search_news_service(
     )
 
     if not news:
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No news found"
+            detail="No news found."
         )
 
     return success_response(

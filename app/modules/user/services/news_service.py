@@ -40,22 +40,45 @@ async def get_latest_news_service(
     current_user: dict
 ):
 
+    # -------------------------
+    # Validate Current User
+    # -------------------------
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
     role = current_user.get("role")
+
+    if role not in ["user", "admin", "superadmin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unauthorized user."
+        )
 
     # =========================
     # USER
     # =========================
     if role == "user":
 
+        user_id = current_user.get("user_id")
+
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User authentication failed."
+            )
+
         user = await UserRepository.get_user_by_id(
             db,
-            current_user["user_id"]
+            user_id
         )
 
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                detail="User not found."
             )
 
         if (
@@ -64,7 +87,7 @@ async def get_latest_news_service(
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User location not available"
+                detail="User location is not available."
             )
 
         location = await get_location_from_coordinates(
@@ -75,7 +98,7 @@ async def get_latest_news_service(
         if not location:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Unable to detect location"
+                detail="Unable to detect user location."
             )
 
         news = await get_latest_news(
@@ -98,20 +121,28 @@ async def get_latest_news_service(
     # =========================
     # ADMIN / SUPERADMIN
     # =========================
+    admin_id = current_user.get("admin_id")
+
+    if not admin_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Admin authentication failed."
+        )
+
     admin = await AdminRepository.get_admin_by_id(
         db,
-        current_user["admin_id"]
+        admin_id
     )
 
     if not admin:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Admin not found"
+            detail="Admin not found."
         )
 
     location = None
 
-    if admin.latitude and admin.longitude:
+    if admin.latitude is not None and admin.longitude is not None:
 
         location = await get_location_from_coordinates(
             admin.latitude,
@@ -145,34 +176,74 @@ async def get_news_by_id_service(
     current_user: dict
 ):
 
+    # -------------------------
+    # Validate Current User
+    # -------------------------
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
+    # -------------------------
+    # Validate News ID
+    # -------------------------
+    if news_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid news ID."
+        )
+
     role = current_user.get("role")
+
+    if role not in ["user", "admin", "superadmin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unauthorized user."
+        )
 
     if role == "user":
 
+        user_id = current_user.get("user_id")
+
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User authentication failed."
+            )
+
         user = await UserRepository.get_user_by_id(
             db,
-            current_user["user_id"]
+            user_id
         )
 
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                detail="User not found."
             )
 
         language = user.preferred_language
 
     else:
 
+        admin_id = current_user.get("admin_id")
+
+        if not admin_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Admin authentication failed."
+            )
+
         admin = await AdminRepository.get_admin_by_id(
             db,
-            current_user["admin_id"]
+            admin_id
         )
 
         if not admin:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Admin not found"
+                detail="Admin not found."
             )
 
         language = admin.preferred_language
@@ -186,12 +257,9 @@ async def get_news_by_id_service(
     if not news:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="News not found"
+            detail="News not found."
         )
 
-    # =========================
-    # TRACK NEWS VIEW
-    # =========================
     if role == "user":
 
         await create_news_view(
@@ -214,6 +282,15 @@ async def share_news_service(
     news_id: int
 ):
 
+    # -------------------------
+    # Validate News ID
+    # -------------------------
+    if news_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid news ID."
+        )
+
     news = await share_news(
         db,
         news_id
@@ -222,7 +299,7 @@ async def share_news_service(
     if not news:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="News not found"
+            detail="News not found."
         )
 
     return success_response(

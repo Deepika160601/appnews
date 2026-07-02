@@ -1,3 +1,8 @@
+from fastapi import (
+    HTTPException,
+    status
+)
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.utils.api_response import success_response
@@ -18,6 +23,12 @@ class UserCategoryService:
             UserCategoryRepository
             .get_categories(db)
         )
+
+        if not categories:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No categories found."
+            )
 
         data = [
             {
